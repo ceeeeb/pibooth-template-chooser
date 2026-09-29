@@ -33,7 +33,8 @@ __version__ = "1.0.0"
 
 SECTION = 'TEMPLATE_CHOOSER'
 STYLED_OPTIONS = ('text_colors', 'text_fonts', 'text_alignments')
-BANNER_HEIGHT_RATIO = 0.14
+CAPTION_HEIGHT_RATIO = 0.07
+PLACEHOLDER_SIZE = 1200
 # A horizontal move longer than this share of the screen width is a swipe
 SWIPE_RATIO = 0.08
 PREVIOUS_KEYS = (pygame.K_UP, pygame.K_LEFT)
@@ -52,7 +53,7 @@ class TemplateChoice(object):
         style_path = osp.splitext(path)[0] + '.cfg'
         if osp.isfile(style_path):
             self._read_style(style_path)
-        self.thumbnail = render_thumbnail(self.parser)
+        self.placeholder = render_placeholder(self.parser)
 
     def _read_style(self, style_path):
         style = ConfigParser()
@@ -79,9 +80,9 @@ def resolve_fonts(value, directory):
     return str(tuple(resolved))
 
 
-def render_thumbnail(parser):
-    """Draw the page of the smallest capture number, the one guests are shown:
-    embedded images as they are, capture holders in grey.
+def render_placeholder(parser):
+    """Draw the page of the smallest capture number, the one guests are shown
+    until a picture exists: embedded images as they are, capture holders in grey.
     """
     orientation, number = min(((orientation, number) for orientation, pages in parser.data.items()
                                for number in pages), key=lambda item: item[1])
@@ -96,8 +97,8 @@ def render_thumbnail(parser):
             image.paste(picture, box[:2], picture)
         elif shape.type == TemplateShapeParser.TYPE_CAPTURE:
             draw.rectangle(box, fill=(170, 170, 175))
-    image.thumbnail((400, 400))
-    return pygame.image.frombytes(image.tobytes(), image.size, 'RGB')
+    image.thumbnail((PLACEHOLDER_SIZE, PLACEHOLDER_SIZE))
+    return image
 
 
 class TemplateChooser(object):
@@ -164,9 +165,10 @@ class Preview(object):
         return image
 
     def build(self, choice, cfg):
-        """Return the last captures assembled in the given template, or None."""
+        """Return the last capture assembled in the given template, its
+        placeholder while no picture exists, or None if it can not be built."""
         if not self.images:
-            return None
+            return choice.placeholder
         if choice.path not in self.cache:
             try:
                 self.cache[choice.path] = self._assemble(choice.parser, cfg)
@@ -191,58 +193,41 @@ class Preview(object):
         return factory.build()
 
 
-class Banner(object):
+class Caption(object):
 
-    """Template selector drawn at the top of the wait screen."""
+    """Discreet label at the top of the wait screen, "<  name  2/9  >": the
+    picture below already shows the template. Its arrows can be tapped."""
 
     def __init__(self):
-        self.previous_rect = self.next_rect = self.rect = None
-
-    def layout(self, surface_rect):
-        height = int(surface_rect.height * BANNER_HEIGHT_RATIO)
-        self.rect = pygame.Rect(0, 0, surface_rect.width, height)
-        button = int(height * 0.7)
-        margin = (height - button) // 2
-        self.previous_rect = pygame.Rect(margin, margin, button, button)
-        self.next_rect = pygame.Rect(surface_rect.width - margin - button, margin, button, button)
+        self.rect = self.previous_rect = self.next_rect = None
 
     def draw(self, surface, chooser):
-        self.layout(surface.get_rect())
+        screen = surface.get_rect()
+        font = pygame.font.Font(None, int(screen.height * CAPTION_HEIGHT_RATIO))
+        text = font.render("{}   {}/{}".format(chooser.current.name, chooser.index + 1, len(chooser.choices)),
+                           True, (255, 255, 255))
+        arrow_width = text.get_height() * 2
+        self.rect = pygame.Rect(0, 0, text.get_width() + 2 * arrow_width, int(text.get_height() * 1.5))
+        self.rect.midtop = (screen.centerx, int(screen.height * 0.02))
+        self.previous_rect = pygame.Rect(self.rect.left, self.rect.top, arrow_width, self.rect.height)
+        self.next_rect = pygame.Rect(self.rect.right - arrow_width, self.rect.top, arrow_width, self.rect.height)
+
         background = pygame.Surface(self.rect.size, pygame.SRCALPHA)
-        background.fill((0, 0, 0, 190))
+        pygame.draw.rect(background, (0, 0, 0, 150), background.get_rect(), border_radius=self.rect.height // 2)
         surface.blit(background, self.rect.topleft)
+        surface.blit(text, text.get_rect(center=self.rect.center))
         for rect, label in ((self.previous_rect, '<'), (self.next_rect, '>')):
-            self._draw_button(surface, rect, label)
-        self._draw_choice(surface, chooser)
-
-    def _draw_button(self, surface, rect, label):
-        pygame.draw.rect(surface, (70, 70, 70), rect, border_radius=8)
-        pygame.draw.rect(surface, (150, 150, 150), rect, 2, border_radius=8)
-        text = pygame.font.Font(None, int(rect.height * 0.9)).render(label, True, (255, 255, 255))
-        surface.blit(text, text.get_rect(center=rect.center))
-
-    def _draw_choice(self, surface, chooser):
-        height = int(self.rect.height * 0.8)
-        thumbnail = chooser.current.thumbnail
-        width = int(thumbnail.get_width() * height / thumbnail.get_height())
-        thumbnail = pygame.transform.smoothscale(thumbnail, (width, height))
-        name = pygame.font.Font(None, int(self.rect.height * 0.42)).render(
-            "{}  ({}/{})".format(chooser.current.name, chooser.index + 1, len(chooser.choices)), True, (255, 255, 255))
-        total = width + 20 + name.get_width()
-        x = self.rect.centerx - total // 2
-        top = (self.rect.height - height) // 2
-        surface.blit(thumbnail, (x, top))
-        pygame.draw.rect(surface, (255, 255, 255), (x - 2, top - 2, width + 4, height + 4), 2)
-        surface.blit(name, name.get_rect(midleft=(x + width + 20, self.rect.centery)))
+            arrow = font.render(label, True, (255, 255, 255))
+            surface.blit(arrow, arrow.get_rect(center=rect.center))
 
     def step_for(self, pos):
-        """Return -1 or 1 if the position hits a button, 0 inside the banner,
-        None outside of it."""
+        """Return -1 or 1 if the position hits an arrow, 0 elsewhere on the
+        label, None outside of it (or before it is drawn)."""
+        if self.rect is None or not self.rect.collidepoint(pos):
+            return None
         if self.previous_rect.collidepoint(pos):
             return -1
-        if self.next_rect.collidepoint(pos):
-            return 1
-        return 0 if self.rect.collidepoint(pos) else None
+        return 1 if self.next_rect.collidepoint(pos) else 0
 
 
 def event_position(event, surface):
@@ -278,12 +263,10 @@ class Swipe(object):
         return 1 if dx < 0 else -1
 
 
-def selection_step(banner, swipe, surface, events):
+def selection_step(caption, swipe, surface, events):
     """Return the requested move in the template list (arrow keys, swipe,
-    banner buttons). The touches used for it are consumed so that they trigger
+    caption arrows). The touches used for it are consumed so that they trigger
     no capture; a simple tap elsewhere keeps its pibooth meaning."""
-    if banner.rect is None:
-        banner.layout(surface.get_rect())
     step, consumed = 0, []
     for event in events:
         if event.type == pygame.KEYDOWN and event.key in PREVIOUS_KEYS + NEXT_KEYS:
@@ -295,7 +278,7 @@ def selection_step(banner, swipe, surface, events):
                 swipe.press(pos)
                 continue
             swiped = swipe.release(pos, surface.get_width())
-            touched = banner.step_for(pos)
+            touched = caption.step_for(pos)
             if swiped or touched is not None:
                 step += swiped or touched
                 consumed.append(event)
@@ -320,11 +303,13 @@ def pibooth_startup(cfg, app):
         except Exception as ex:  # A broken template must not prevent the others
             LOGGER.warning("Template '%s' ignored: %s", path, ex)
     app.template_chooser = TemplateChooser(cfg, choices) if choices else None
-    app.template_banner = Banner()
+    app.template_caption = Caption()
     app.template_swipe = Swipe()
     app.template_preview = Preview()
     cfg.template_preview = app.template_preview  # The factory hook only receives cfg
     LOGGER.info("Template chooser: %s templates", len(choices))
+    if app.template_chooser and app.previous_picture is None:
+        app.previous_picture = app.template_chooser.current.placeholder
 
 
 @pibooth.hookimpl
@@ -356,10 +341,10 @@ def pibooth_setup_picture_factory(cfg, opt_index, factory):
 @pibooth.hookimpl(hookwrapper=True)
 def state_wait_do(cfg, app, win, events):
     """Handle the selection before the other plugins see the events, and draw
-    the banner once they have drawn the screen."""
+    the caption once they have drawn the screen."""
     chooser = getattr(app, 'template_chooser', None)
     if chooser:
-        step = selection_step(app.template_banner, app.template_swipe, win.surface, events)
+        step = selection_step(app.template_caption, app.template_swipe, win.surface, events)
         if step:
             chooser.select(step)
             preview = app.template_preview.build(chooser.current, cfg)
@@ -370,5 +355,5 @@ def state_wait_do(cfg, app, win, events):
                 app.template_redraw = True
     yield
     if chooser:
-        app.template_banner.draw(win.surface, chooser)
+        app.template_caption.draw(win.surface, chooser)
         pygame.display.update()

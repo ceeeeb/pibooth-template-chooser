@@ -2,14 +2,13 @@
 
 Pibooth plugin letting guests choose the picture template on the wait screen.
 
-A banner at the top of the wait screen shows the current template, its thumbnail
-and its position in the list. Guests change it by swiping horizontally on the
-screen, with the `<` `>` touch buttons of the banner, or with the arrow keys.
-The chosen template is used for the next pictures.
-
-Once a picture has been taken, the wait screen shows its captures assembled
-again in the selected template, so guests see the result with real photos.
-The saved and printed picture is not changed.
+The wait screen shows the selected template in place of the last picture:
+the first capture of the last picture assembled again in the single photo page
+of the template, or grey photo holders until a picture exists. A discreet
+caption at the top gives its name and position in the list. Guests change the
+template by swiping horizontally on the screen, by tapping the `<` `>` arrows
+of the caption, or with the arrow keys. The chosen template is used for the
+next pictures; the saved and printed picture is not changed.
 
 The templates are the draw.io files of the
 [pibooth-picture-template](https://github.com/pibooth/pibooth-picture-template)
@@ -30,7 +29,7 @@ Every `*.xml` file of the directory is offered. The template set in
 ## Template style
 
 A template may come with a style file of the same name (`hollywood.xml` and
-`hollywood.cfg`) giving the name displayed in the banner and the style of the
+`hollywood.cfg`) giving the name displayed in the caption and the style of the
 texts, which replaces the `[PICTURE]` values while the template is selected:
 
 ```ini
