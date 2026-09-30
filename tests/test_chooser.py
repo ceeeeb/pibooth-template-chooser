@@ -7,8 +7,8 @@ import pygame
 import pytest
 from PIL import Image
 
-from pibooth_template_chooser import (Caption, Preview, Swipe, TemplateChoice, TemplateChooser,
-                                      resolve_fonts, selection_step)
+from pibooth_template_chooser.chooser import Preview, TemplateChoice, TemplateChooser, resolve_fonts
+from pibooth_template_chooser.touch import Caption, Swipe, selection_step
 from conftest import CAPTURE_COLOR
 
 
