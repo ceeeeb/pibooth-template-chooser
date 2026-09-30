@@ -3,12 +3,15 @@
 """Caption of the wait screen and template selection by keys and touches."""
 
 import math
+import time
 
 import pygame
 
 from pibooth.utils import get_event_pos
 
 CAPTION_HEIGHT_RATIO = 0.07
+# How long the caption stays on screen after a template change, in seconds
+CAPTION_DURATION = 2.5
 # A horizontal move longer than this share of the screen width is a swipe
 SWIPE_RATIO = 0.08
 # A touch moving less than this share of the screen width is a tap
@@ -19,10 +22,26 @@ NEXT_KEYS = (pygame.K_DOWN, pygame.K_RIGHT)
 
 class Caption(object):
 
-    """Discreet label at the top of the wait screen, "<  name  2/9  >": the
-    picture below already shows the template. Its arrows can be tapped."""
+    """Discreet label at the top of the wait screen, "<  name  2/9  >",
+    shown for a moment after each template change: the picture below already
+    shows the template. Its arrows can be tapped while it is displayed."""
 
     def __init__(self):
+        self.rect = self.previous_rect = self.next_rect = None
+        self.hide_time = 0
+
+    def show(self):
+        self.hide_time = time.monotonic() + CAPTION_DURATION
+
+    @property
+    def expired(self):
+        return time.monotonic() >= self.hide_time
+
+    @property
+    def drawn(self):
+        return self.rect is not None
+
+    def hide(self):
         self.rect = self.previous_rect = self.next_rect = None
 
     def draw(self, surface, chooser):
@@ -46,7 +65,7 @@ class Caption(object):
 
     def step_for(self, pos):
         """Return -1 or 1 if the position hits an arrow, 0 elsewhere on the
-        label, None outside of it (or before it is drawn)."""
+        label, None outside of it (or while it is not displayed)."""
         if self.rect is None or not self.rect.collidepoint(pos):
             return None
         if self.previous_rect.collidepoint(pos):

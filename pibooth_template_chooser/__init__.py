@@ -97,13 +97,15 @@ def pibooth_setup_picture_factory(cfg, opt_index, factory):
 @pibooth.hookimpl(hookwrapper=True)
 def state_wait_do(cfg, app, win, events):
     """Handle the selection before the other plugins see the events, and draw
-    the caption once they have drawn the screen."""
+    the caption once they have drawn the screen, until it expires."""
     chooser = getattr(app, 'template_chooser', None)
+    caption = getattr(app, 'template_caption', None)
     if chooser:
-        step = selection_step(app.template_caption, app.template_swipe, win.surface, events,
+        step = selection_step(caption, app.template_swipe, win.surface, events,
                               cfg.getboolean('WINDOW', 'touch_flip'))
         if step:
             chooser.select(step)
+            caption.show()
             preview = app.template_preview.build(chooser.current, cfg)
             if preview:
                 # Displayed only: the saved and printed file is the real picture
@@ -111,6 +113,11 @@ def state_wait_do(cfg, app, win, events):
                 app.previous_animated = None
                 app.template_redraw = True
     yield
-    if chooser:
-        app.template_caption.draw(win.surface, chooser)
+    if not chooser:
+        return
+    if not caption.expired:
+        caption.draw(win.surface, chooser)
         pygame.display.update()
+    elif caption.drawn:
+        caption.hide()
+        app.template_redraw = True  # Redraw the screen without the caption
