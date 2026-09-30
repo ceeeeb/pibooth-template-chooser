@@ -232,3 +232,56 @@ def test_selection_step_swipe_direction_on_a_flipped_screen(drawn_caption, surfa
     events = [finger(pygame.FINGERDOWN, (200, 300), surface), finger(pygame.FINGERUP, (600, 300), surface)]
 
     assert selection_step(drawn_caption, Swipe(), surface, events, touch_flip=True) == 1
+
+
+class Clock(object):
+
+    def __init__(self, monkeypatch):
+        self.now = 1000.0
+        monkeypatch.setattr('pibooth_template_chooser.touch.time.monotonic', lambda: self.now)
+
+
+def test_caption_is_hidden_until_a_template_change(monkeypatch):
+    clock = Clock(monkeypatch)
+    caption = Caption()
+
+    assert caption.expired
+    caption.show()
+    assert not caption.expired
+    clock.now += 3
+    assert caption.expired
+
+
+def test_hidden_caption_arrows_do_nothing(drawn_caption):
+    point = drawn_caption.next_rect.center
+    drawn_caption.hide()
+
+    assert not drawn_caption.drawn
+    assert drawn_caption.step_for(point) is None
+
+
+def run_wait_do(cfg, app, surface, events):
+    from pibooth_template_chooser import state_wait_do
+    hook = state_wait_do(cfg, app, types.SimpleNamespace(surface=surface), events)
+    next(hook)
+    with pytest.raises(StopIteration):
+        hook.send(None)
+
+
+def test_caption_shows_on_change_then_clears_the_screen(monkeypatch, cfg, templates_dir, surface):
+    clock = Clock(monkeypatch)
+    monkeypatch.setattr(pygame.display, 'update', lambda: None)
+    app = types.SimpleNamespace(template_chooser=make_chooser(cfg, templates_dir), template_caption=Caption(),
+                                template_swipe=Swipe(), template_preview=Preview(), template_redraw=False)
+
+    run_wait_do(cfg, app, surface, [])
+    assert not app.template_caption.drawn  # Hidden at startup
+
+    run_wait_do(cfg, app, surface, [types.SimpleNamespace(type=pygame.KEYDOWN, key=pygame.K_RIGHT)])
+    assert app.template_caption.drawn
+    app.template_redraw = False
+
+    clock.now += 3
+    run_wait_do(cfg, app, surface, [])
+    assert not app.template_caption.drawn
+    assert app.template_redraw  # The wait screen is drawn again without it

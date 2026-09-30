@@ -4,11 +4,13 @@ Pibooth plugin letting guests choose the picture template on the wait screen.
 
 The wait screen shows the selected template in place of the last picture:
 the first capture of the last picture assembled again in the single photo page
-of the template, or grey photo holders until a picture exists. A discreet
-caption at the top gives its name and position in the list. Guests change the
-template by swiping horizontally on the screen, by tapping the `<` `>` arrows
-of the caption, or with the arrow keys. The chosen template is used for the
-next pictures; the saved and printed picture is not changed.
+of the template, or grey photo holders until a picture exists. Guests change the
+template by swiping horizontally on the screen or with the arrow keys; a
+discreet caption at the top then gives its name and position in the list for a
+few seconds, with `<` `>` arrows that can be tapped while it is displayed. A
+missed swipe does nothing, only a tap keeps its pibooth meaning (taking a
+picture). The chosen template is used for the next pictures; the saved and
+printed picture is not changed.
 
 The templates are draw.io files, drawn as for the
 [pibooth-picture-template](https://github.com/pibooth/pibooth-picture-template)
