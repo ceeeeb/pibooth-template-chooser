@@ -2,6 +2,8 @@
 
 """Caption of the wait screen and template selection by keys and touches."""
 
+import math
+
 import pygame
 
 from pibooth.utils import get_event_pos
@@ -9,6 +11,8 @@ from pibooth.utils import get_event_pos
 CAPTION_HEIGHT_RATIO = 0.07
 # A horizontal move longer than this share of the screen width is a swipe
 SWIPE_RATIO = 0.08
+# A touch moving less than this share of the screen width is a tap
+TAP_RATIO = 0.03
 PREVIOUS_KEYS = (pygame.K_UP, pygame.K_LEFT)
 NEXT_KEYS = (pygame.K_DOWN, pygame.K_RIGHT)
 
@@ -66,11 +70,14 @@ class Swipe(object):
         self.start = pos
 
     def release(self, pos, width):
-        """Return 1 for a swipe to the left (next), -1 to the right, 0 otherwise."""
+        """Return 1 for a swipe to the left (next), -1 to the right, 0 for
+        any other move, and None for a tap (or a release without press)."""
         start, self.start = self.start, None
         if start is None:
-            return 0
+            return None
         dx, dy = pos[0] - start[0], pos[1] - start[1]
+        if math.hypot(dx, dy) < width * TAP_RATIO:
+            return None
         if abs(dx) < width * SWIPE_RATIO or abs(dx) < abs(dy):
             return 0
         return 1 if dx < 0 else -1
@@ -79,8 +86,9 @@ class Swipe(object):
 def selection_step(caption, swipe, surface, events, touch_flip=False):
     """Return the requested move in the template list (arrow keys, swipe,
     caption arrows). The touches used for it are consumed so that they trigger
-    no capture; a simple tap elsewhere keeps its pibooth meaning. Finger
-    positions are mirrored when ``touch_flip`` is set, as pibooth does."""
+    no capture, even a missed swipe; a simple tap elsewhere keeps its pibooth
+    meaning. Finger positions are mirrored when ``touch_flip`` is set, as
+    pibooth does."""
     step, consumed = 0, []
     for event in events:
         if event.type == pygame.KEYDOWN and event.key in PREVIOUS_KEYS + NEXT_KEYS:
@@ -93,8 +101,9 @@ def selection_step(caption, swipe, surface, events, touch_flip=False):
                 continue
             swiped = swipe.release(pos, surface.get_width())
             touched = caption.step_for(pos)
-            if swiped or touched is not None:
-                step += swiped or touched
+            # A missed swipe is consumed too, or pibooth would take it for a tap
+            if swiped is not None or touched is not None:
+                step += swiped or touched or 0
                 consumed.append(event)
     for event in consumed:
         events.remove(event)
