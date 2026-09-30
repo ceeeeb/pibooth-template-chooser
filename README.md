@@ -23,12 +23,32 @@ plugin, whose code this plugin now includes: uninstall it
 template =
 
 [TEMPLATE_CHOOSER]
-# Directory of the picture templates guests choose from on the wait screen
-directory = ~/.config/pibooth/templates
+# Directory of the picture templates guests choose from on the wait screen, empty for the templates shipped with the plugin
+directory =
 ```
 
 Every `*.xml` file of the directory is offered. The template set in
 `[PICTURE] template` is selected at startup when it belongs to the directory.
+
+## Shipped templates
+
+The plugin comes with nine templates, each with a single photo page and a
+four photos page on a 100x148 mm postcard at 300 dpi: `photomaton` (two strips
+of four photos), `hollywood`, `anniversaire-noir-or`, `art-deco-bleu-or`,
+`mariage-coeur-rose`, `mariage-beige-floral`, `mariage-floral-or`,
+`mariage-mauve` and `vintage-carte-postale`.
+
+To change them, copy the `templates` and `fonts` directories of the package
+next to each other, edit the templates in [draw.io](https://app.diagrams.net)
+and set `directory` to the copied `templates` directory.
+
+Their fonts are under the SIL Open Font License, see the `OFL-*.txt` files:
+Great Vibes, Lobster, Montserrat and Playfair Display (the unmodified upstream
+variable font, as its Reserved Font Name forbids renaming a modified version).
+
+The `tools` directory holds the scripts that generated the templates:
+`make_template.py OUT.xml` for `photomaton` and `make_themes.py FONT_DIR OUT_DIR`
+for the themes.
 
 ## Template style
 

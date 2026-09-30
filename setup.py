@@ -15,6 +15,7 @@ setup(
     platforms=['unix', 'linux'],
     keywords=['Raspberry Pi', 'photobooth', 'pibooth', 'template'],
     packages=['pibooth_template_chooser'],
+    package_data={'pibooth_template_chooser': ['templates/*.xml', 'templates/*.cfg', 'fonts/*']},
     # specname: several implementations of the same hook in the plugin
     install_requires=['pibooth-ceeeeb>=2.0.10', 'pluggy>=1.1'],
     zip_safe=False,
