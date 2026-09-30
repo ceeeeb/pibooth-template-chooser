@@ -26,7 +26,7 @@ import pygame
 from PIL import Image, ImageDraw
 
 import pibooth
-from pibooth.utils import LOGGER
+from pibooth.utils import LOGGER, get_event_pos
 from pibooth_picture_template import TemplateParser, TemplatePictureFactory, TemplateShapeParser
 
 __version__ = "1.0.0"
@@ -230,13 +230,6 @@ class Caption(object):
         return 1 if self.next_rect.collidepoint(pos) else 0
 
 
-def event_position(event, surface):
-    if event.type in (pygame.FINGERDOWN, pygame.FINGERUP):
-        width, height = surface.get_size()
-        return (event.x * width, event.y * height)
-    return event.pos
-
-
 def is_touch(event):
     return (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button in (1, 2, 3)) \
         or event.type in (pygame.FINGERDOWN, pygame.FINGERUP)
@@ -263,17 +256,18 @@ class Swipe(object):
         return 1 if dx < 0 else -1
 
 
-def selection_step(caption, swipe, surface, events):
+def selection_step(caption, swipe, surface, events, touch_flip=False):
     """Return the requested move in the template list (arrow keys, swipe,
     caption arrows). The touches used for it are consumed so that they trigger
-    no capture; a simple tap elsewhere keeps its pibooth meaning."""
+    no capture; a simple tap elsewhere keeps its pibooth meaning. Finger
+    positions are mirrored when ``touch_flip`` is set, as pibooth does."""
     step, consumed = 0, []
     for event in events:
         if event.type == pygame.KEYDOWN and event.key in PREVIOUS_KEYS + NEXT_KEYS:
             step += -1 if event.key in PREVIOUS_KEYS else 1
             consumed.append(event)
         elif is_touch(event):
-            pos = event_position(event, surface)
+            pos = get_event_pos(surface.get_size(), event, touch_flip)
             if event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
                 swipe.press(pos)
                 continue
@@ -344,7 +338,8 @@ def state_wait_do(cfg, app, win, events):
     the caption once they have drawn the screen."""
     chooser = getattr(app, 'template_chooser', None)
     if chooser:
-        step = selection_step(app.template_caption, app.template_swipe, win.surface, events)
+        step = selection_step(app.template_caption, app.template_swipe, win.surface, events,
+                              cfg.getboolean('WINDOW', 'touch_flip'))
         if step:
             chooser.select(step)
             preview = app.template_preview.build(chooser.current, cfg)
