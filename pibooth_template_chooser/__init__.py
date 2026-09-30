@@ -22,19 +22,22 @@ from .touch import Caption, Swipe, selection_step
 __version__ = "1.0.0"
 
 SECTION = 'TEMPLATE_CHOOSER'
+BUNDLED_TEMPLATES = osp.join(osp.dirname(osp.abspath(__file__)), 'templates')
 
 
 @pibooth.hookimpl
 def pibooth_configure(cfg):
     cfg.add_option('PICTURE', 'template', '',
                    "Picture template path (draw.io file), empty for the standard layout")
-    cfg.add_option(SECTION, 'directory', '~/.config/pibooth/templates',
-                   "Directory of the picture templates guests choose from on the wait screen")
+    cfg.add_option(SECTION, 'directory', '',
+                   "Directory of the picture templates guests choose from on the wait screen, "
+                   "empty for the templates shipped with the plugin")
 
 
 @pibooth.hookimpl
 def pibooth_startup(cfg, app):
-    paths = sorted(glob.glob(osp.join(cfg.getpath(SECTION, 'directory'), '*.xml')))
+    directory = cfg.getpath(SECTION, 'directory') or BUNDLED_TEMPLATES
+    paths = sorted(glob.glob(osp.join(directory, '*.xml')))
     choices = []
     for path in paths:
         try:

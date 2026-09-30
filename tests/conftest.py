@@ -7,9 +7,9 @@ import pytest
 from PIL import Image
 
 import pibooth_template_chooser
+from pibooth_template_chooser import BUNDLED_TEMPLATES
 from pibooth.config.parser import PiConfigParser
 
-DATA_DIR = osp.join(osp.dirname(__file__), 'data')
 CAPTURE_COLOR = (200, 30, 40)
 
 
@@ -29,7 +29,7 @@ def pytest_configure(config):
 def templates_dir(tmp_path):
     """A directory of two templates, one with a style file."""
     for name in ('photomaton', 'second'):
-        shutil.copy(osp.join(DATA_DIR, 'photomaton.xml'), str(tmp_path / (name + '.xml')))
+        shutil.copy(osp.join(BUNDLED_TEMPLATES, 'photomaton.xml'), str(tmp_path / (name + '.xml')))
     (tmp_path / 'fonts').mkdir()
     (tmp_path / 'fonts' / 'Title.ttf').write_bytes(b'')
     (tmp_path / 'photomaton.cfg').write_text(

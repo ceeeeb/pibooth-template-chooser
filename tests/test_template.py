@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import ast
+import glob
 import os.path as osp
+import types
 
 import pytest
 from PIL import Image
@@ -8,9 +11,10 @@ from PIL import Image
 from pibooth import pictures
 from pibooth_template_chooser import setup_template_factory
 from pibooth_template_chooser.template import TemplateParser, TemplateParserError, TemplatePictureFactory
-from conftest import CAPTURE_COLOR, DATA_DIR
+from pibooth_template_chooser import BUNDLED_TEMPLATES
+from conftest import CAPTURE_COLOR
 
-TEMPLATE = osp.join(DATA_DIR, 'photomaton.xml')
+TEMPLATE = osp.join(BUNDLED_TEMPLATES, 'photomaton.xml')
 
 
 @pytest.fixture
@@ -64,3 +68,27 @@ def test_hook_uses_the_configured_template(cfg, capture):
 
 def test_hook_keeps_the_standard_layout_without_template(cfg, capture):
     assert setup_template_factory(cfg, pictures.get_picture_factory((capture,))) is None
+
+
+def test_every_bundled_template_parses_with_its_style():
+    from pibooth_template_chooser.chooser import TemplateChoice
+    paths = sorted(glob.glob(osp.join(BUNDLED_TEMPLATES, '*.xml')))
+
+    choices = [TemplateChoice(path) for path in paths]
+
+    assert len(choices) == 9
+    for choice in choices:
+        assert choice.style, choice.path  # Every bundled template has a style file
+        for font in ast.literal_eval(choice.style['text_fonts']):
+            assert not font.endswith('.ttf') or osp.isfile(font), font
+
+
+def test_startup_offers_the_bundled_templates_by_default(cfg):
+    from pibooth_template_chooser import pibooth_startup
+    cfg.set('TEMPLATE_CHOOSER', 'directory', '')
+    app = types.SimpleNamespace(previous_picture=None)
+
+    pibooth_startup(cfg, app)
+
+    assert len(app.template_chooser.choices) == 9
+    assert app.previous_picture is app.template_chooser.current.placeholder
