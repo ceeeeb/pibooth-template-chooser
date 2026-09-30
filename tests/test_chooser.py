@@ -192,3 +192,25 @@ def test_selection_step_follows_the_caption_arrows(drawn_caption, surface):
     events = [mouse(pygame.MOUSEBUTTONDOWN, pos), mouse(pygame.MOUSEBUTTONUP, pos)]
 
     assert selection_step(drawn_caption, Swipe(), surface, events) == -1
+
+
+def finger(event_type, pos, surface):
+    width, height = surface.get_size()
+    return types.SimpleNamespace(type=event_type, x=pos[0] / width, y=pos[1] / height)
+
+
+def test_selection_step_mirrors_fingers_on_a_flipped_screen(drawn_caption, surface):
+    # Raw panel coordinates of a tap on the "<" arrow of an upside down screen
+    width, height = surface.get_size()
+    x, y = drawn_caption.previous_rect.center
+    raw = (width - x, height - y)
+    events = [finger(pygame.FINGERDOWN, raw, surface), finger(pygame.FINGERUP, raw, surface)]
+
+    assert selection_step(drawn_caption, Swipe(), surface, events, touch_flip=True) == -1
+
+
+def test_selection_step_swipe_direction_on_a_flipped_screen(drawn_caption, surface):
+    # A swipe to the left seen by the guest is a swipe to the right on the panel
+    events = [finger(pygame.FINGERDOWN, (200, 300), surface), finger(pygame.FINGERUP, (600, 300), surface)]
+
+    assert selection_step(drawn_caption, Swipe(), surface, events, touch_flip=True) == 1

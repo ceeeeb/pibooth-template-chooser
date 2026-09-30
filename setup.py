@@ -16,7 +16,7 @@ setup(
     keywords=['Raspberry Pi', 'photobooth', 'pibooth', 'template'],
     py_modules=['pibooth_template_chooser'],
     # pibooth-picture-template requires the upstream pibooth: install it with --no-deps
-    install_requires=['pibooth-ceeeeb>=2.0.8.3'],
+    install_requires=['pibooth-ceeeeb>=2.0.10'],
     zip_safe=False,
     entry_points={'pibooth': ["pibooth_template_chooser = pibooth_template_chooser"]},
 )
