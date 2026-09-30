@@ -118,10 +118,11 @@ def test_preview_of_a_broken_template_is_none(cfg, templates_dir, capture):
 
 
 @pytest.mark.parametrize('start, end, step', [
-    ((500, 200), (300, 210), 1),    # to the left: next
-    ((300, 200), (500, 190), -1),   # to the right: previous
-    ((300, 200), (330, 200), 0),    # too short
-    ((300, 200), (400, 400), 0),    # mostly vertical
+    ((500, 200), (300, 210), 1),     # to the left: next
+    ((300, 200), (500, 190), -1),    # to the right: previous
+    ((300, 200), (350, 200), 0),     # too short for a swipe
+    ((300, 200), (400, 400), 0),     # mostly vertical
+    ((300, 200), (310, 205), None),  # tap
 ])
 def test_swipe(start, end, step):
     swipe = Swipe()
@@ -130,8 +131,8 @@ def test_swipe(start, end, step):
     assert swipe.release(end, 1000) == step
 
 
-def test_swipe_release_without_press_is_ignored():
-    assert Swipe().release((0, 0), 1000) == 0
+def test_swipe_release_without_press_is_a_tap():
+    assert Swipe().release((0, 0), 1000) is None
 
 
 @pytest.fixture
@@ -179,6 +180,23 @@ def test_selection_step_consumes_a_swipe(drawn_caption, surface):
     assert events == [events[0]]
 
 
+@pytest.mark.parametrize('end', [(560, 300), (600, 420)])
+def test_selection_step_consumes_a_missed_swipe(drawn_caption, surface, end):
+    # Too short or too vertical to change the template, but no tap either
+    events = [mouse(pygame.MOUSEBUTTONDOWN, (600, 300)), mouse(pygame.MOUSEBUTTONUP, end)]
+
+    assert selection_step(drawn_caption, Swipe(), surface, events) == 0
+    assert events == [events[0]]
+
+
+def test_selection_step_keeps_a_tap_with_a_slight_move(drawn_caption, surface):
+    tap = mouse(pygame.MOUSEBUTTONUP, (608, 304))
+    events = [mouse(pygame.MOUSEBUTTONDOWN, (600, 300)), tap]
+
+    assert selection_step(drawn_caption, Swipe(), surface, events) == 0
+    assert tap in events
+
+
 def test_selection_step_keeps_a_simple_tap(drawn_caption, surface):
     tap = mouse(pygame.MOUSEBUTTONUP, (600, 300))
     events = [mouse(pygame.MOUSEBUTTONDOWN, (600, 300)), tap]
@@ -214,3 +232,56 @@ def test_selection_step_swipe_direction_on_a_flipped_screen(drawn_caption, surfa
     events = [finger(pygame.FINGERDOWN, (200, 300), surface), finger(pygame.FINGERUP, (600, 300), surface)]
 
     assert selection_step(drawn_caption, Swipe(), surface, events, touch_flip=True) == 1
+
+
+class Clock(object):
+
+    def __init__(self, monkeypatch):
+        self.now = 1000.0
+        monkeypatch.setattr('pibooth_template_chooser.touch.time.monotonic', lambda: self.now)
+
+
+def test_caption_is_hidden_until_a_template_change(monkeypatch):
+    clock = Clock(monkeypatch)
+    caption = Caption()
+
+    assert caption.expired
+    caption.show()
+    assert not caption.expired
+    clock.now += 3
+    assert caption.expired
+
+
+def test_hidden_caption_arrows_do_nothing(drawn_caption):
+    point = drawn_caption.next_rect.center
+    drawn_caption.hide()
+
+    assert not drawn_caption.drawn
+    assert drawn_caption.step_for(point) is None
+
+
+def run_wait_do(cfg, app, surface, events):
+    from pibooth_template_chooser import state_wait_do
+    hook = state_wait_do(cfg, app, types.SimpleNamespace(surface=surface), events)
+    next(hook)
+    with pytest.raises(StopIteration):
+        hook.send(None)
+
+
+def test_caption_shows_on_change_then_clears_the_screen(monkeypatch, cfg, templates_dir, surface):
+    clock = Clock(monkeypatch)
+    monkeypatch.setattr(pygame.display, 'update', lambda: None)
+    app = types.SimpleNamespace(template_chooser=make_chooser(cfg, templates_dir), template_caption=Caption(),
+                                template_swipe=Swipe(), template_preview=Preview(), template_redraw=False)
+
+    run_wait_do(cfg, app, surface, [])
+    assert not app.template_caption.drawn  # Hidden at startup
+
+    run_wait_do(cfg, app, surface, [types.SimpleNamespace(type=pygame.KEYDOWN, key=pygame.K_RIGHT)])
+    assert app.template_caption.drawn
+    app.template_redraw = False
+
+    clock.now += 3
+    run_wait_do(cfg, app, surface, [])
+    assert not app.template_caption.drawn
+    assert app.template_redraw  # The wait screen is drawn again without it
