@@ -6,7 +6,6 @@ import shutil
 import pytest
 from PIL import Image
 
-import pibooth_picture_template
 import pibooth_template_chooser
 from pibooth.config.parser import PiConfigParser
 
@@ -23,7 +22,6 @@ class FakePluginManager(object):
 def pytest_configure(config):
     # The options are declared in a module-level dictionary: once per session
     dummy = PiConfigParser('unused.cfg', FakePluginManager(), load=False)
-    pibooth_picture_template.pibooth_configure(dummy)
     pibooth_template_chooser.pibooth_configure(dummy)
 
 
