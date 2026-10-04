@@ -19,7 +19,7 @@ from .chooser import Preview, TemplateChoice, TemplateChooser
 from .template import TemplateParser, TemplatePictureFactory
 from .touch import Caption, Swipe, selection_step
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 
 SECTION = 'TEMPLATE_CHOOSER'
 BUNDLED_TEMPLATES = osp.join(osp.dirname(osp.abspath(__file__)), 'templates')
