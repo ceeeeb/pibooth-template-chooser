@@ -108,6 +108,17 @@ def test_preview_assembles_the_last_capture_in_the_template(cfg, templates_dir, 
     assert preview.build(choice, cfg) is image  # cached
 
 
+def test_cleared_preview_is_the_placeholder_again(cfg, templates_dir, capture):
+    choice = TemplateChoice(str(templates_dir / 'photomaton.xml'))
+    preview = Preview()
+    preview.store(FakeFactory(capture, ['Hello']), 0)
+    preview.build(choice, cfg)
+
+    preview.clear()
+
+    assert preview.build(choice, cfg) is choice.placeholder
+
+
 def test_preview_of_a_broken_template_is_none(cfg, templates_dir, capture):
     choice = TemplateChoice(str(templates_dir / 'photomaton.xml'))
     choice.parser.data = {}  # No page for any capture number
@@ -272,7 +283,8 @@ def test_caption_shows_on_change_then_clears_the_screen(monkeypatch, cfg, templa
     clock = Clock(monkeypatch)
     monkeypatch.setattr(pygame.display, 'update', lambda: None)
     app = types.SimpleNamespace(template_chooser=make_chooser(cfg, templates_dir), template_caption=Caption(),
-                                template_swipe=Swipe(), template_preview=Preview(), template_redraw=False)
+                                template_swipe=Swipe(), template_preview=Preview(), template_redraw=False,
+                                previous_picture=Image.new('RGB', (10, 10)))
 
     run_wait_do(cfg, app, surface, [])
     assert not app.template_caption.drawn  # Hidden at startup
@@ -285,3 +297,17 @@ def test_caption_shows_on_change_then_clears_the_screen(monkeypatch, cfg, templa
     run_wait_do(cfg, app, surface, [])
     assert not app.template_caption.drawn
     assert app.template_redraw  # The wait screen is drawn again without it
+
+
+def test_forgotten_picture_gives_way_to_the_template(cfg, templates_dir, surface, capture):
+    chooser = make_chooser(cfg, templates_dir)
+    preview = Preview()
+    preview.store(FakeFactory(capture, ['Hello']), 0)
+    app = types.SimpleNamespace(template_chooser=chooser, template_caption=Caption(), template_swipe=Swipe(),
+                                template_preview=preview, template_redraw=False, previous_picture=None)
+
+    run_wait_do(cfg, app, surface, [])
+
+    assert app.previous_picture is chooser.current.placeholder
+    assert preview.build(chooser.current, cfg) is chooser.current.placeholder
+    assert app.template_redraw

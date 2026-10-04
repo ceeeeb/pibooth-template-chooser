@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='pibooth_template_chooser',
-    version='2.1.0',
+    version='2.1.1',
     description="Pibooth plugin letting guests choose the picture template on the wait screen",
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
