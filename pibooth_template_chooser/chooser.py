@@ -148,6 +148,11 @@ class Preview(object):
         self.opt_index = opt_index
         self.cache = {}
 
+    def clear(self):
+        """Drop the last picture, previews are placeholders again."""
+        self.images = self.texts = None
+        self.cache = {}
+
     def _reduce(self, image):
         image = image.copy()
         image.thumbnail((self.MAX_CAPTURE_WIDTH, self.MAX_CAPTURE_WIDTH))
