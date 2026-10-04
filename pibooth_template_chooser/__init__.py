@@ -115,6 +115,11 @@ def state_wait_do(cfg, app, win, events):
     yield
     if not chooser:
         return
+    if app.previous_picture is None:
+        # The last picture was discarded (forget button): never preview it
+        app.template_preview.clear()
+        app.previous_picture = chooser.current.placeholder
+        app.template_redraw = True
     if not caption.expired:
         caption.draw(win.surface, chooser)
         pygame.display.update()
